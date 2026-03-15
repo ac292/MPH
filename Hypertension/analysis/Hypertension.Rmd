@@ -1,5 +1,5 @@
 ---
-title: "VTPEH 6270 - Check Point 04"
+title: "Hypertension Analysis"
 author: "Alexandrine Bilwes Crane"
 date: "`r Sys.Date()`"
 output:

@@ -287,27 +287,37 @@ The discussed results or linear regressions are summarized in table 1.
 # create a table with results from simple linear regression (1 variable: Age)
 library(knitr)
 library(kableExtra)
+library(gt)
+library(webshot2)
+
 stats <- data.frame(
   Variables = c("data origin", "effect size (a)", "CI 95%", "intercept (b)", "noise (RSE)", "Adjusted R^2"),
   Male = c("1984-1990", 0.86,"(0.76 - 0.95)", "9.43 ± 5.57", 1.96, 0.98), 
   Female = c("1984-1990", 1.41,"(1.32 - 1.51)", "-29.7 ± 3.25", 2.16, 0.99)
 )
 
-# Create kable object
-tbl <- kable(
-  stats,
-  caption = "Effect of Age on Hypertension - linear regression parameters. Unit is mm Hg or mm Hg/year.",
-  format = "html",
-  booktabs = TRUE
-) %>%
-  kable_styling(full_width = FALSE)
-
 # Save to output folder
-save_kable(tbl, "../output/stats_table.html")
+gt_table <- stats %>%
+  gt() %>%
+  fmt_number(
+    columns = where(is.numeric),
+    decimals = 2
+  ) %>%
+  tab_header(title = "Effect of Age on Hypertension - linear regression parameters. Unit is mm Hg or mm Hg/year") %>%
+  gtsave("../output/stats_table.png")
+
+
+```
+
+```{r}
+
 
 # create a table with results from multivariate linear regression (2 Variables, Age and Gender)
 library(knitr)
 library(kableExtra)
+library(gt)
+library(webshot2)
+
 stats_model <- data.frame(
   Variables = c("effect size", "CI 95%", "intercept", "Adj R^2"),
   Male = c( 39.1,"(31.6 - 46.6)", "-29.7 ± 3.25", 0.99), 
@@ -315,17 +325,15 @@ stats_model <- data.frame(
   Male_Age = c(-0.56, "(-0.69 -0.43)","-29.7 ± 3.25", 0.99)
 )
 
-# Create kable object
-tbl_multi <- kable(
-  stats_model,
-  caption = "Effect of Age and Gender on Hypertension - multivariate linear regression parameters. (1984-1990)",
-  format = "html",
-  booktabs = TRUE
-) %>%
-  kable_styling(full_width = FALSE)
-
 # Save to output folder
-save_kable(tbl_multi, "../output/stats_multi_table.html")
+gt_table2 <- stats_model %>%
+  gt() %>%
+  fmt_number(
+    columns = where(is.numeric),
+    decimals = 2
+  ) %>%
+  tab_header(title = "Effect of Age and Gender on Hypertension - multivariate linear regression parameters. (1984-1990)") %>%
+  gtsave("../output/stats_multi_table.png")
 
 ```
 

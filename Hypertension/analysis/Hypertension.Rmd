@@ -25,7 +25,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
 
-# Objective and Approach\
+# Effect of Age and Gender on the prevalence of Hypertensive disease\
 
 ## Specific Objective \
 
@@ -144,6 +144,12 @@ variable_summary <- tibble(
 
 # View table
 variable_summary
+
+# view min and max of estimate and SE
+min(data_age$ESTIMATE, na.rm = TRUE)
+max(data_age$ESTIMATE, na.rm = TRUE)
+min(data_age$STANDARD_ERROR, na.rm = TRUE)
+max(data_age$STANDARD_ERROR, na.rm = TRUE)
 
 ```
 
@@ -264,10 +270,11 @@ data_age_1990_Mal <- subset(data_age_1990, NESTING_LABEL == "Male")
 modelMal1990 <- lm(ESTIMATE ~ Med_Age, data = data_age_1990_Mal)
 summary(modelMal1990)
 
-model <- lm(ESTIMATE ~ NESTING_LABEL:Med_Age, data = data_age_1990)
+model <- lm(ESTIMATE ~ NESTING_LABEL + Med_Age + NESTING_LABEL * Med_Age, 
+            data = data_age_1990)
 summary(model)
 
-model2 <- lm(ESTIMATE ~ NESTING_LABEL * Med_Age,
+model2 <- lm(ESTIMATE ~ NESTING_LABEL + Med_Age + NESTING_LABEL * Med_Age,
              data = data_age_2017)
 summary(model2)
 
@@ -277,19 +284,19 @@ The discussed results or linear regressions are summarized in table 1.
 
 ```{r table-regression, echo=FALSE}
 
-# create a table with results
+# create a table with results from simple linear regression (1 variable: Age)
 library(knitr)
 library(kableExtra)
 stats <- data.frame(
-  Variables = c("data origin", "slope (a)", "intercept (b)", "noise (RSE)"),
-  Male = c("1984-1990", 0.86, 9.43, 1.96), 
-  Female = c("1984-1990", 1.41, -29.7, 2.16)
+  Variables = c("data origin", "effect size (a)", "CI 95%", "intercept (b)", "noise (RSE)", "Adjusted R^2"),
+  Male = c("1984-1990", 0.86,"(0.76 - 0.95)", "9.43 ± 5.57", 1.96, 0.98), 
+  Female = c("1984-1990", 1.41,"(1.32 - 1.51)", "-29.7 ± 3.25", 2.16, 0.99)
 )
 
 # Create kable object
 tbl <- kable(
   stats,
-  caption = "Table with linear regression parameters. Unit is mm Hg or mm Hg/year.",
+  caption = "Effect of Age on Hypertension - linear regression parameters. Unit is mm Hg or mm Hg/year.",
   format = "html",
   booktabs = TRUE
 ) %>%
@@ -298,6 +305,27 @@ tbl <- kable(
 # Save to output folder
 save_kable(tbl, "../output/stats_table.html")
 
+# create a table with results from multivariate linear regression (2 Variables, Age and Gender)
+library(knitr)
+library(kableExtra)
+stats_model <- data.frame(
+  Variables = c("effect size", "CI 95%", "intercept", "Adj R^2"),
+  Male = c( 39.1,"(31.6 - 46.6)", "-29.7 ± 3.25", 0.99), 
+  Age = c( 1.42,"(1.32 - 1.51)", "-29.7 ± 3.25", 0.99),
+  Male_Age = c(-0.56, "(-0.69 -0.43)","-29.7 ± 3.25", 0.99)
+)
+
+# Create kable object
+tbl_multi <- kable(
+  stats_model,
+  caption = "Effect of Age and Gender on Hypertension - multivariate linear regression parameters. (1984-1990)",
+  format = "html",
+  booktabs = TRUE
+) %>%
+  kable_styling(full_width = FALSE)
+
+# Save to output folder
+save_kable(tbl_multi, "../output/stats_multi_table.html")
 
 ```
 

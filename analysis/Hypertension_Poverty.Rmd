@@ -1,0 +1,268 @@
+---
+title: "VTPEH 6109 - study of hypertensive disease in the USA"
+author: "Alexandrine Bilwes Crane"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: true
+    toc_depth: 1
+    number_sections: true
+  html_document:
+    toc: true
+    toc_depth: '1'
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+subtitle: 
+urlcolor: 
+---
+
+```{r markdown-options, include = FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+```
+
+
+# Objective and Approach\
+
+## Specific Objective \
+
+We will look at the impact of hypertension in men and women as they age.
+The CDC data gives the rate of hypertensive disease (as opposed to actual counts) in adults 20 and older, per gender, poverty level, age group, race. We will focus on exploring hypertension disease in relation to gender, age, and poverty level. \
+* Does hypertension affect men and women in the same fashion? \
+* Does hypertensive disease affect all individuals the same regardless of income? \
+
+
+https://data.cdc.gov/National-Center-for-Health-Statistics/DQS-Hypertension-in-adults-age-20-and-older-by-sel/va5e-efw9/about_data
+```{r setup, results = 'hide'}
+
+#set working directory and read data file
+
+data <- 
+  read.csv("../data/Hypertension_in_adults_age_20_and_older.csv", header = TRUE)
+
+```
+
+
+
+
+
+```{r, results='hide'}
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(tibble)
+
+
+```
+
+## Hypertension as function of age and gender
+ 
+Does hypertension affect men and women in the same fashion?  
+ 
+### Parsing \
+
+*The focus is on data that illustrates the impact of hypertensive disease by age group, gender and for two time periods, 1988-1994 & 2017-3/2020*
+
+```{r, results='hide'}
+
+# simplify the data frame to keep only the data of interest
+data_poverty <- subset(data, GROUP == "Poverty level" & ESTIMATE_TYPE == 
+                        "Percent of population, age adjusted") 
+data_age <- subset(data, GROUP == "Sex and age group") 
+
+# remove redundant data
+data_age <- subset(data_age, !(SUBGROUP_ORDER %in% c(13,16,21,24)) )
+# remove columns of no use for this study
+data_age <- data_age[,c(1,8,11,13,14,15,16,18,20,21)]
+
+# create a Med_Age variable 
+
+data_age <- data_age %>%
+   mutate(Med_Age = case_when(
+     SUBGROUP_ORDER == 14 ~ 27, 
+     SUBGROUP_ORDER == 22 ~ 27, 
+     SUBGROUP_ORDER == 15 ~ 40, 
+     SUBGROUP_ORDER == 23 ~ 40, 
+     SUBGROUP_ORDER == 17 ~ 50, 
+     SUBGROUP_ORDER == 25 ~ 50,
+     SUBGROUP_ORDER == 18 ~ 60, 
+     SUBGROUP_ORDER == 26 ~ 60, 
+     SUBGROUP_ORDER == 19 ~ 70, 
+     SUBGROUP_ORDER == 27 ~ 70, 
+     SUBGROUP_ORDER == 20 ~ 80, 
+     SUBGROUP_ORDER == 28 ~ 80
+   ))
+
+
+data_age_1990 <- subset(data_age, TIME_PERIOD == "1988-1994") 
+data_age_2005 <- subset(data_age, TIME_PERIOD == "2005-2008") 
+data_age_2017 <- subset(data_age, TIME_PERIOD == "2017-3/2020") 
+
+
+data_poverty <- data_poverty[,c(1,8,11,13,14,15,16,18,20,21)]
+data_poverty <- subset(data_poverty, !(SUBGROUP_ORDER %in% c(13,16,21,24)) )
+
+# create a numerical variable "Year" to describe average Year within each data collection range
+
+data_poverty <- data_poverty %>%
+   mutate(Year = case_when(
+      TIME_PERIOD == "1988-1994" ~ 1988, 
+      TIME_PERIOD == "1995-1998" ~ 1995, 
+      TIME_PERIOD == "1999-2000" ~ 1999, 
+      TIME_PERIOD == "2001-2004" ~ 2001, 
+      TIME_PERIOD == "2005-2008" ~ 2005, 
+      TIME_PERIOD == "2009-2012" ~ 2009,
+      TIME_PERIOD == "2013-2016" ~ 2013, 
+      TIME_PERIOD == "2017-3/2020" ~ 2017
+   ))
+
+
+```
+
+### Data Table
+
+```{r}
+
+# table for the data
+
+vars <- c("NESTING_LABEL", "Med_Age", "ESTIMATE", "STANDARD_ERROR")
+
+# Function to convert R classes to human-readable types
+get_var_type <- function(x) {
+  if (is.numeric(x)) {
+    "Continuous"
+  } else if (is.factor(x) || is.character(x)) {
+    "Categorical"
+  } else {
+    "Other"
+  }
+}
+
+# Create summary table
+variable_summary <- tibble(
+  Variable = vars,
+  Type = sapply(data_age[vars], get_var_type),   
+  Class = sapply(data_age[vars], class)   
+)
+
+# View table
+variable_summary
+
+```
+
+
+### Data Visualization 
+
+```{r, results='hide'}
+  
+ 
+# plot
+
+data_age_1990$Year <- "1990"
+data_age_2005$Year <- "2005"
+data_age_2017$Year <- "2017"
+
+combined <- rbind(data_age_1990, data_age_2005, data_age_2017)
+combined <- combined %>%
+  mutate(group = interaction(Year, NESTING_LABEL))
+
+BP_AGE_GENDER <- ggplot(combined,
+       aes(x = Med_Age,
+           y = ESTIMATE,
+           color = group,
+           group = group)) +
+  geom_point(size = 3, alpha = 0.6) +
+  geom_line() +
+  geom_errorbar(aes(
+    ymin = ESTIMATE - 1.96 * STANDARD_ERROR,
+    ymax = ESTIMATE + 1.96 * STANDARD_ERROR
+  ),
+  width = 0.6) +
+  labs( title= "Percentage of hypertensive population per age group (bins of 10 yrs)",
+  subtitle="(CDC data collected for time frames 1988-94 and 2017-20)",
+  x = "median age for 10-year age group",
+  y = "Estimate of hypertensive (%)")
+
+# save plot to a output file
+ggsave(
+  filename = "../output/Hypertension_Age_Gender.png",
+  plot = BP_AGE_GENDER,
+  width = 8.5,
+  height = 10, 
+  dpi =300
+)
+ 
+
+```
+
+## Hypertension as a function of Income levels
+
+Does hypertensive disease affect all individuals the same regardless of income?
+
+### Data Visualization 
+
+```{r}
+# plot 
+BP_POV <- ggplot(data_poverty,
+       aes(x = Year,
+           y = ESTIMATE, 
+           color = SUBGROUP
+           )) +
+  geom_point(size = 3, alpha = 0.6) +
+  geom_line() +
+  scale_color_manual(
+  name = "Poverty level (% FPL)",
+  values = c("red", "orange", "yellow", "darkgreen"),
+  breaks = c("<100% FPL", "100% to <200% FPL", "200% to <400% FPL", "≥400% FPL"),
+  labels = c(
+    "<100",
+    "100–199",
+    "200–399",
+    "≥400"
+  )) +
+  geom_errorbar(aes(
+    ymin = ESTIMATE - 1.96 * STANDARD_ERROR,
+    ymax = ESTIMATE + 1.96 * STANDARD_ERROR
+  ),
+  width = 0.6) +
+  labs( title= "Evolution of the percentage of hypertensive prevalence by poverty level",
+  subtitle="(CDC data, age-adjusted)",
+  x = "year",
+  y = "Estimate (%) with 95% CI ") 
+
+
+# save plot to a output file
+ggsave(
+  filename = "../output/Hypertension_Poverty.png",
+  plot = BP_POV,
+  width = 8.5,
+  height = 10, 
+  dpi =300
+)
+ 
+
+```
+
+# Conclusions
+
+The prevalence of hypertension between men and women is different between ages 18 and  59(ref 1).  However, the rate at which women develop hypertension starting age 18 is much steeper compared to men (ref 2). A disparity in the prevalence of hypertension is also observed for the four income level analyzed: this trend seems to indicate that hypertension is more prevalent for individuals at poverty levels up to 399% of the  Federal Poverty Level (ref 3).  
+
+# References
+
+* 1.	Connelly PJ, Currie G, Delles C.  Sex Differences in the Prevalence, Outcomes and Management of Hypertension. Curr Hypertens Rep. 2022 Jun,24(6):185-92.
+doi: 10.1007/s11906-022-01183-8
+
+* 2.	Ostchega Y, Fryar CD, Nwankwo T, Nguyen DT. Hypertension prevalence among adults aged 18 and over: United States, 2017–2018. NCHS Data Brief. 2020;364:1–8.
+
+* 3.	Hardy ST, Jaeger BC, Foti K, Ghazi L, Wozniak G, Muntner P. Trends in Blood Pressure Control among US Adults With Hypertension, 2013–2014 to 2021–2023. Am J Hypertens. 2025;38(2):120-128. doi:10.1093/ajh/hpae141
+
+
+
+
+
+
+
